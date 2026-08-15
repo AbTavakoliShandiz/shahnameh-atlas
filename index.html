@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>اطلس مفهومی شاهنامه | The Shahnameh Conceptual Atlas</title>
+<meta name="description" content="پروژه‌ای پژوهشی برای نگاشت معنا، رویداد، روابط و مفاهیم شاهنامه‌ی فردوسی — جست‌وجو، گراف تعاملی و دعوت به همکاری.">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="logo-mark-64.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="shared.css">
+<style>
+.hero{
+  background: linear-gradient(180deg, var(--indigo) 0%, var(--indigo-deep) 100%);
+  color:var(--paper); position:relative; overflow:hidden;
+}
+.hero::before{
+  content:''; position:absolute; inset:0;
+  background-image: radial-gradient(circle at 15% 20%, rgba(231,184,78,0.08), transparent 40%),
+                     radial-gradient(circle at 85% 80%, rgba(161,56,42,0.10), transparent 45%);
+  pointer-events:none;
+}
+.hero-inner{ position:relative; padding:76px 0 84px; text-align:center; }
+.hero-logo-chip{
+  background:var(--paper); border-radius:16px; width:132px; padding:14px 16px 10px;
+  margin:0 auto 22px; box-shadow:0 6px 24px rgba(0,0,0,0.28);
+}
+.hero-logo-img{ width:100%; display:block; }
+.hero h1{
+  font-family:'NotoNastaliq','Vazirmatn'; font-weight:700; font-size:clamp(2.1rem, 5vw, 3.3rem);
+  margin:0 0 16px; line-height:1.35;
+}
+.hero p.tagline{
+  color:rgba(244,233,206,0.85); max-width:640px; margin:0 auto 34px; font-size:1.08rem;
+}
+.hero-ctas{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+.hero-stats{
+  display:flex; justify-content:center; gap:0; margin-top:56px; flex-wrap:wrap;
+  border-top:1px solid rgba(244,233,206,0.14);
+}
+.hero-stat{ padding:22px 34px; border-left:1px solid rgba(244,233,206,0.14); min-width:140px; }
+.hero-stat:last-child{ border-left:none; }
+.hero-stat b{ display:block; font-size:1.7rem; color:var(--gold-bright); font-weight:700; }
+.hero-stat span{ font-size:0.82rem; color:rgba(244,233,206,0.7); }
+
+.progress-strip{ max-width:520px; margin:28px auto 0; }
+.progress-track{ height:7px; border-radius:4px; background:rgba(244,233,206,0.15); overflow:hidden; }
+.progress-fill{ height:100%; width:0; background:linear-gradient(90deg, var(--gold), var(--gold-bright)); transition:width 1s ease; }
+.progress-label{ font-size:0.76rem; color:rgba(244,233,206,0.7); margin-top:8px; text-align:center; }
+.data-empty-note{
+  max-width:480px; margin:0 auto; font-size:0.85rem; color:rgba(244,233,206,0.75);
+  border:1px dashed rgba(244,233,206,0.3); border-radius:3px; padding:14px 18px;
+}
+
+.pillars{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+.pillar{
+  background:#FBF4E2; border:1px solid var(--paper-line); border-radius:var(--radius);
+  padding:26px 20px; text-align:center; position:relative;
+}
+.pillar .num{
+  position:absolute; top:14px; left:16px; font-size:0.72rem; color:var(--gold);
+  font-weight:700; letter-spacing:1px;
+}
+.pillar svg.rosette{ width:30px; height:30px; color:var(--lacquer); margin-bottom:14px; }
+.pillar h3{ margin:0 0 8px; font-size:1.02rem; color:var(--indigo); }
+.pillar p{ margin:0; font-size:0.85rem; color:var(--ink-soft); }
+
+.manifesto{ background:var(--paper-deep); }
+.manifesto .container{ max-width:760px; }
+.manifesto p{ font-size:1.05rem; color:var(--ink); margin:0 0 18px; }
+.manifesto p:last-child{ margin-bottom:0; }
+
+.showcase{ display:flex; gap:40px; align-items:center; flex-wrap:wrap; }
+.showcase-text{ flex:1; min-width:280px; }
+.showcase-visual{
+  flex:1; min-width:280px; aspect-ratio:4/3; border-radius:var(--radius);
+  background: linear-gradient(135deg, var(--indigo) 0%, var(--indigo-deep) 100%);
+  position:relative; overflow:hidden; box-shadow:var(--shadow);
+}
+.showcase-visual svg{ position:absolute; inset:0; width:100%; height:100%; }
+.showcase ul{ padding-right:20px; margin:20px 0 0; color:var(--ink-soft); }
+.showcase li{ margin-bottom:10px; }
+
+.collab{
+  background: linear-gradient(180deg, var(--indigo-deep) 0%, var(--indigo) 100%);
+  color:var(--paper); text-align:center;
+}
+.collab h2{ color:var(--paper); }
+.collab .section-sub{ color:rgba(244,233,206,0.78); margin-left:auto; margin-right:auto; }
+.collab-roles{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin:30px 0 36px; }
+.role-tag{
+  border:1px solid var(--gold-dim); padding:8px 18px; border-radius:20px; font-size:0.85rem; color:var(--gold-bright);
+}
+
+@media (max-width:860px){ .pillars{ grid-template-columns:1fr 1fr; } }
+@media (max-width:560px){ .pillars{ grid-template-columns:1fr; } .hero-stat{ padding:16px 20px; } }
+</style>
+</head>
+<body>
+
+<header id="site-header" class="site-header"></header>
+
+<section class="hero">
+  <div class="hero-inner container">
+    <div class="hero-logo-chip">
+      <img src="logo-full.png" alt="اطلس مفهومی شاهنامه" class="hero-logo-img">
+    </div>
+    <h1>اطلس مفهومی شاهنامه</h1>
+    <p class="tagline">نگاشت پیوسته‌ی معنا، رویداد، روابط و مفاهیم شاهنامه‌ی فردوسی — بیت‌به‌بیت، برای پژوهش، آموزش و کاوش عمومی.</p>
+    <div class="hero-ctas">
+      <a href="atlas.html" class="btn btn-gold">ورود به اطلس</a>
+      <a href="contact.html" class="btn btn-outline">همکاری در پروژه</a>
+    </div>
+    <div class="hero-stats" id="hero-stats"></div>
+    <div class="progress-strip" id="progress-strip">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-label" id="progress-label"></div>
+    </div>
+  </div>
+</section>
+
+<section class="manifesto">
+  <div class="container">
+    <div class="divider">هدف پروژه</div>
+    <p>شاهنامه فقط روایتی از پادشاهان و پهلوانان نیست؛ شبکه‌ای پیچیده از شخصیت‌ها، رویدادها و مفاهیمی چون خرد، داد، فرّه و پیمان است که در طول هزاران بیت به‌هم تنیده‌اند. اطلس مفهومی شاهنامه تلاش می‌کند این شبکه‌ی پنهان را قابل‌جست‌وجو، قابل‌دیدن و قابل‌تحلیل کند.</p>
+    <p>این پروژه با تمرکز بر بخش نخست شاهنامه آغاز شده تا کلیت روش پیش از گسترش به کل اثر محک بخورد. داده‌ها به‌مرور و بخش‌به‌بخش تکمیل می‌شوند و همین حالا هم قابل کاوش‌اند.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="divider">چهار رکن اطلس</div>
+    <div class="pillars">
+      <div class="pillar">
+        <span class="num">۰۱</span>
+        <svg class="rosette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="8"/><path d="M8 12h8M12 8v8"/></svg>
+        <h3>معنا</h3>
+        <p>معنای امروزی و شرح هر بیت، برای فهم مستقیم متن کهن</p>
+      </div>
+      <div class="pillar">
+        <span class="num">۰۲</span>
+        <svg class="rosette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 18 L12 4 L20 18 Z"/></svg>
+        <h3>رویداد</h3>
+        <p>کنش، کنشگر و هدف هر رخداد، استخراج‌شده از دل ابیات</p>
+      </div>
+      <div class="pillar">
+        <span class="num">۰۳</span>
+        <svg class="rosette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="12" r="3"/><circle cx="17" cy="12" r="3"/><path d="M10 12h4"/></svg>
+        <h3>روابط</h3>
+        <p>پیوند شخصیت‌ها و رویدادها با یکدیگر، به‌صورت گراف قابل‌کاوش</p>
+      </div>
+      <div class="pillar">
+        <span class="num">۰۴</span>
+        <svg class="rosette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 3 L21 12 L12 21 L3 12 Z"/></svg>
+        <h3>مفاهیم</h3>
+        <p>ردیابی مفاهیمی چون خرد، داد و فرّه در سراسر متن</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="tight" style="background:var(--paper-deep);">
+  <div class="container showcase">
+    <div class="showcase-text">
+      <div class="divider">نمای زنده</div>
+      <h2 class="section-title">جست‌وجو کنید، در گراف کاوش کنید</h2>
+      <p style="color:var(--ink-soft)">اطلس یک ابزار وب کاملاً تعاملی است؛ نیازی به نصب یا حساب کاربری نیست.</p>
+      <ul>
+        <li>جست‌وجوی متنی در بیت‌ها، معنای امروزی، مدخل‌ها و مفاهیم</li>
+        <li>فیلتر بر اساس دودمان، پادشاه و دوره‌ی روایی</li>
+        <li>گراف تعاملی مدخل‌ها، رویدادها و روابطشان</li>
+      </ul>
+      <div style="margin-top:24px;"><a href="atlas.html" class="btn btn-primary">شروع کاوش در اطلس ←</a></div>
+    </div>
+    <div class="showcase-visual">
+      <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="glow" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#E7B84E" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#E7B84E" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect width="400" height="300" fill="url(#glow)"/>
+        <g stroke="#E7B84E" stroke-width="1" opacity="0.55" fill="none">
+          <line x1="90" y1="90" x2="200" y2="140"/>
+          <line x1="200" y1="140" x2="310" y2="80"/>
+          <line x1="200" y1="140" x2="230" y2="230"/>
+          <line x1="90" y1="90" x2="120" y2="210"/>
+          <line x1="120" y1="210" x2="230" y2="230"/>
+          <line x1="310" y1="80" x2="290" y2="200"/>
+          <line x1="230" y1="230" x2="290" y2="200"/>
+        </g>
+        <g fill="#E7B84E">
+          <circle cx="90" cy="90" r="6"/>
+          <circle cx="200" cy="140" r="9"/>
+          <circle cx="310" cy="80" r="5"/>
+          <circle cx="120" cy="210" r="5"/>
+          <circle cx="230" cy="230" r="6"/>
+          <circle cx="290" cy="200" r="5"/>
+        </g>
+        <g fill="#A1382A"><circle cx="200" cy="140" r="3.2"/></g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section class="collab">
+  <div class="container">
+    <div class="divider" style="color:var(--gold-bright);">همکاری</div>
+    <h2 class="section-title">به اطلس بپیوندید</h2>
+    <p class="section-sub">این پروژه در گام‌های نخست است و برای گسترش به کل شاهنامه به همکاری علاقه‌مندان نیاز دارد — از استخراج داده تا پژوهش و توسعه.</p>
+    <div class="collab-roles">
+      <span class="role-tag">استخراج داده و برچسب‌گذاری</span>
+      <span class="role-tag">پژوهش ادبی و شاهنامه‌شناسی</span>
+      <span class="role-tag">توسعه‌ی فنی</span>
+      <span class="role-tag">ویراستاری و بازبینی</span>
+    </div>
+    <a href="contact.html" class="btn btn-gold">تماس برای همکاری</a>
+  </div>
+</section>
+
+<footer id="site-footer" class="site-footer"></footer>
+
+<script src="stats-data.js"></script>
+<script src="shared.js"></script>
+<script>
+renderChrome('index.html');
+if(window.ATLAS_STATS){
+  const s = ATLAS_STATS;
+  if(s.beyts === 0){
+    document.getElementById('hero-stats').innerHTML =
+      `<div class="data-empty-note">داده‌ی نسخه‌ی منتشرشده (مسکو) هنوز در دیتابیس درج نشده — این آمار به‌محض آپدیت دیتابیس نمایش داده می‌شود.</div>`;
+  } else {
+    document.getElementById('hero-stats').innerHTML = `
+      <div class="hero-stat"><b>${s.beyts.toLocaleString('fa-IR')}</b><span>بیت ثبت‌شده</span></div>
+      <div class="hero-stat"><b>${s.entities.toLocaleString('fa-IR')}</b><span>مدخل</span></div>
+      <div class="hero-stat"><b>${s.concepts.toLocaleString('fa-IR')}</b><span>مفهوم</span></div>
+      <div class="hero-stat"><b>${s.events.toLocaleString('fa-IR')}</b><span>رویداد استخراج‌شده</span></div>
+    `;
+  }
+  if(s.sections_progress_pct !== undefined && document.getElementById('progress-strip')){
+    if(s.beyts === 0){
+      document.getElementById('progress-strip').style.display = 'none';
+    } else {
+      document.getElementById('progress-fill').style.width = s.sections_progress_pct + '%';
+      document.getElementById('progress-label').textContent =
+        `${s.sections_with_data.toLocaleString('fa-IR')} از ${s.sections.toLocaleString('fa-IR')} پادشاهی (٪${s.sections_progress_pct.toLocaleString('fa-IR')}) دست‌کم یک بیت کامل (مدخل+مفهوم) دارند`;
+    }
+  }
+}
+</script>
+</body>
+</html>
