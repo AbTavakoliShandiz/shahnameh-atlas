@@ -13,10 +13,10 @@ function debounce(fn, ms){
 }
 function sqlEsc(s){ return String(s).replace(/'/g,"''"); }
 
-/** اجرای امن یک کوئری روی worker httpvfs؛ اگر جدول/ویو هنوز نباشد، خطا نمی‌دهد. */
+/** اجرای امن یک کوئری روی worker httpvfs؛ اگر جدول/ویو هنوز نباشد، خطا نمی‌دهد (فقط لاگ سبک برای دیباگ آینده). */
 async function safeQuery(sql, params){
   try{ return rowsToObjects(await worker.db.exec(sql, params)); }
-  catch(e){ return null; }
+  catch(e){ console.debug('safeQuery: جدول/ویو موجود نیست یا خطای دیگر (طبیعی است):', e.message); return null; }
 }
 async function runQuery(sql, params){
   return rowsToObjects(await worker.db.exec(sql, params));
@@ -130,52 +130,71 @@ async function runSearch(){
   const eraId = document.getElementById('f-era').value;
 
   const viewProbe = await safeQuery('SELECT 1 FROM v_beyt_summary LIMIT 1');
-  const useView = viewProbe !== null;
+  let useView = viewProbe !== null;
 
-  let sql = useView ? `
-    SELECT code, mesra1, mesra2, paraphrase, page, volume, edition,
-           king_name, section_code, dynasty_id, dynasty_name, era_id, era_name
-    FROM v_beyt_summary
-    WHERE edition = '${PUBLIC_EDITION}'
-  ` : `
-    SELECT b.code, b.mesra1, b.mesra2, b.paraphrase, b.page, b.volume, b.edition, b.era_id,
-           s.king_name, s.section_code, s.dynasty_id, d.name AS dynasty_name, e.name AS era_name
-    FROM core_beyts b
-    LEFT JOIN core_sections s ON b.section_code = s.section_code
-    LEFT JOIN core_dynasties d ON s.dynasty_id = d.dynasty_id
-    LEFT JOIN core_eras e ON b.era_id = e.era_id
-    WHERE b.edition = '${PUBLIC_EDITION}'
-  `;
-  const tbl = useView ? '' : 'b.';
-  const params = [];
+  function buildQuery(useViewMode){
+    let sql = useViewMode ? `
+      SELECT code, mesra1, mesra2, paraphrase, page, volume, edition,
+             king_name, section_code, dynasty_id, dynasty_name, era_id, era_name
+      FROM v_beyt_summary
+      WHERE edition = '${PUBLIC_EDITION}'
+    ` : `
+      SELECT b.code, b.mesra1, b.mesra2, b.paraphrase, b.page, b.volume, b.edition, b.era_id,
+             s.king_name, s.section_code, s.dynasty_id, d.name AS dynasty_name, e.name AS era_name
+      FROM core_beyts b
+      LEFT JOIN core_sections s ON b.section_code = s.section_code
+      LEFT JOIN core_dynasties d ON s.dynasty_id = d.dynasty_id
+      LEFT JOIN core_eras e ON b.era_id = e.era_id
+      WHERE b.edition = '${PUBLIC_EDITION}'
+    `;
+    const tbl = useViewMode ? '' : 'b.';
+    const params = [];
 
-  if(q){
-    if(searchMode === 'text'){
-      sql += ` AND (${tbl}mesra1 LIKE ? OR ${tbl}mesra2 LIKE ?) `;
-      const like = `%${q}%`;
-      params.push(like, like);
-    } else {
-      const hasMeanings = (await safeQuery('SELECT 1 FROM core_beyt_meanings LIMIT 1')) !== null;
-      sql += ` AND (${tbl}mesra1 LIKE ? OR ${tbl}mesra2 LIKE ? OR ${tbl}paraphrase LIKE ?
-               OR ${tbl}code IN (SELECT beyt_code FROM know_beyt_entities be JOIN know_entities ke ON be.entity_id=ke.entity_id WHERE ke.name LIKE ?)
-               OR ${tbl}code IN (SELECT beyt_code FROM know_beyt_concepts bc JOIN know_concepts kc ON bc.concept_id=kc.concept_id WHERE kc.name LIKE ?)
-               ${hasMeanings ? `OR ${tbl}code IN (SELECT beyt_code FROM core_beyt_meanings WHERE meaning_text LIKE ?)` : ''}
-               ) `;
-      const like = `%${q}%`;
-      params.push(like, like, like, like, like);
-      if(hasMeanings) params.push(like);
+    if(q){
+      if(searchMode === 'text'){
+        sql += ` AND (${tbl}mesra1 LIKE ? OR ${tbl}mesra2 LIKE ?) `;
+        const like = `%${q}%`;
+        params.push(like, like);
+      } else {
+        const hasMeanings = hasMeaningsTable;
+        sql += ` AND (${tbl}mesra1 LIKE ? OR ${tbl}mesra2 LIKE ? OR ${tbl}paraphrase LIKE ?
+                 OR ${tbl}code IN (SELECT beyt_code FROM know_beyt_entities be JOIN know_entities ke ON be.entity_id=ke.entity_id WHERE ke.name LIKE ?)
+                 OR ${tbl}code IN (SELECT beyt_code FROM know_beyt_concepts bc JOIN know_concepts kc ON bc.concept_id=kc.concept_id WHERE kc.name LIKE ?)
+                 ${hasMeanings ? `OR ${tbl}code IN (SELECT beyt_code FROM core_beyt_meanings WHERE meaning_text LIKE ?)` : ''}
+                 ) `;
+        const like = `%${q}%`;
+        params.push(like, like, like, like, like);
+        if(hasMeanings) params.push(like);
+      }
     }
+    if(dynastyId){ sql += ` AND ${tbl}dynasty_id = ? `; params.push(dynastyId); }
+    if(sectionCode){ sql += ` AND ${tbl}section_code = ? `; params.push(sectionCode); }
+    if(eraId){ sql += ` AND ${tbl}era_id = ? `; params.push(eraId); }
+    sql += ` ORDER BY ${tbl}volume, ${tbl}section_code, ${tbl}beyt_num`;
+    return {sql, params};
   }
-  if(dynastyId){ sql += ` AND ${tbl}dynasty_id = ? `; params.push(dynastyId); }
-  if(sectionCode){ sql += ` AND ${tbl}section_code = ? `; params.push(sectionCode); }
-  if(eraId){ sql += ` AND ${tbl}era_id = ? `; params.push(eraId); }
-  sql += ` ORDER BY ${tbl}volume, ${tbl}section_code, ${tbl}beyt_num`;
+
+  const hasMeaningsTable = (await safeQuery('SELECT 1 FROM core_beyt_meanings LIMIT 1')) !== null;
 
   let rows = [];
+  let {sql, params} = buildQuery(useView);
   try{
     rows = await runQuery(sql, params);
   }catch(e){
-    rows = [];
+    console.error('خطای کوئری جست‌وجو (حالت view):', e);
+    if(useView){
+      // ویو v_beyt_summary شاید ستون‌هایش با انتظار ما فرق دارد — به جوین دستی برمی‌گردیم
+      useView = false;
+      ({sql, params} = buildQuery(false));
+      try{
+        rows = await runQuery(sql, params);
+      }catch(e2){
+        console.error('خطای کوئری جست‌وجو (جوین دستی، بعد از شکست view):', e2);
+        rows = [];
+      }
+    } else {
+      rows = [];
+    }
   }
 
   if(myToken !== searchToken) return; // جست‌وجوی جدیدتری شروع شده، این نتیجه دیگر مهم نیست
