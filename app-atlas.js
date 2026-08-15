@@ -25,10 +25,10 @@ async function runQuery(sql, params){
 const PUBLIC_EDITION = 'M';
 
 // آدرس فایل دیتابیس. چون سایت و دیتابیس حالا هر دو روی همان GitHub Pages
-// (همان ریپازیتوری) میزبانی می‌شوند، هر دو هم‌مبدأ (same-origin) هستند —
-// یعنی مسیر نسبی ساده کافی است، نیازی به URL کامل یا تنظیم CORS نیست.
-// (GitHub Pages از HTTP Range Requests پشتیبانی می‌کند، بر خلاف Cloudflare Pages.)
-const DB_URL = 'Shahnameh_Atlas.db';
+// (همان ریپازیتوری) میزبانی می‌شوند، هر دو هم‌مبدأ (same-origin) هستند.
+// از «حالت chunked» استفاده می‌کنیم (نه «full») چون GitHub پاسخ HEAD را gzip
+// می‌کند و این باعث می‌شد sql.js-httpvfs نتواند طول واقعی فایل را تشخیص دهد؛
+// در حالت chunked طول فایل مستقیم از db-meta.js خوانده می‌شود، نه از سرور.
 
 let worker = null; // sql.js-httpvfs worker (تمام کوئری‌ها async و از طریق HTTP Range می‌آیند)
 const PAGE_SIZE = 20;
@@ -43,9 +43,12 @@ async function init(){
 
   worker = await createDbWorker(
     [{ from: 'inline', config: {
-        serverMode: 'full',
+        serverMode: 'chunked',
         requestChunkSize: 1024,
-        url: DB_URL
+        urlPrefix: DB_URL_PREFIX,
+        serverChunkSize: DB_SERVER_CHUNK_SIZE,
+        suffixLength: DB_SUFFIX_LENGTH,
+        databaseLengthBytes: DB_LENGTH_BYTES
     }}],
     'sqlite.worker.js',
     'sql-wasm.wasm'

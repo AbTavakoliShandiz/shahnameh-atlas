@@ -5,19 +5,18 @@
 اجرا:
     python3 update_data.py Shahnameh_Atlas.db
 
-این اسکریپت دو کار می‌کند:
+این اسکریپت سه کار می‌کند:
   ۱) یک نسخه‌ی «بهینه‌شده برای httpvfs» از دیتابیس می‌سازد (اندیس‌های لازم +
-     اندازه‌ی صفحه‌ی کوچک‌تر برای درخواست‌های Range کاراتر) و آن را به‌جای
-     Shahnameh_Atlas.db در همین پوشه می‌گذارد.
-  ۲) stats-data.js را بازسازی می‌کند (آمار سبک، برای صفحه‌ی اصلی/فوتر).
+     اندازه‌ی صفحه‌ی کوچک‌تر برای درخواست‌های Range کاراتر).
+  ۲) این فایل بهینه‌شده را به تکه‌های کوچک‌تر (chunk) می‌شکند — چون GitHub Pages
+     پاسخ‌های HEAD را gzip می‌کند و این باعث می‌شود sql.js-httpvfs نتواند طول
+     واقعی فایل را در «حالت full» تشخیص دهد (خطای «Length of the file not known»).
+     راه‌حل رسمی خودِ کتابخانه دقیقاً همین «حالت chunked» است.
+  ۳) stats-data.js و db-meta.js را بازسازی می‌کند.
 
-⚠️ نکته‌ی مهم: فایل Shahnameh_Atlas.db تولیدشده را **در Cloudflare Pages آپلود نکنید.**
-Cloudflare Pages هنوز از HTTP Range Requests (206 Partial Content) پشتیبانی
-نمی‌کند (باگ شناخته‌شده‌ی خودشان)، و بدون آن sql.js-httpvfs کار نمی‌کند.
-این فایل را باید جداگانه در یک باکت Cloudflare R2 آپلود کنید (که Range را
-درست پشتیبانی می‌کند) — توضیح کامل مراحل در README.md، بخش «هاست دیتابیس
-روی R2» آمده. بقیه‌ی فایل‌های سایت (html/js/css) همچنان مثل قبل در
-Cloudflare Pages می‌روند — فقط این یک فایل جای دیگری میزبانی می‌شود.
+⚠️ خروجی این اسکریپت چند فایل `Shahnameh_Atlas.db.0000`, `Shahnameh_Atlas.db.0001`, …
+است، نه یک فایل تکی `Shahnameh_Atlas.db`. همه‌ی این فایل‌ها باید در ریپازیتوری
+GitHub آپلود شوند (فایل تکی قدیمی دیگر توسط سایت خوانده نمی‌شود).
 """
 import sys
 import json
@@ -26,6 +25,8 @@ import sqlite3
 import pathlib
 
 PUBLIC_EDITION = "M"
+SERVER_CHUNK_SIZE = 1024 * 1024  # هر تکه ۱ مگابایت — تعادل بین تعداد فایل و کارایی
+SUFFIX_LENGTH = 4  # تا ۹۹۹۹ تکه (چند ده گیگابایت) پشتیبانی می‌شود
 
 # اندیس‌هایی که برای کوئری‌های اصلی اطلس لازم‌اند (بدون این‌ها httpvfs مجبور
 # می‌شود کل جدول را بخواند). هرکدام اگر جدول/ستونش نبود، بی‌خطر رد می‌شود.
@@ -69,6 +70,27 @@ def optimize_for_httpvfs(db_path: pathlib.Path):
     con.close()
     return added, skipped
 
+def split_into_chunks(db_path: pathlib.Path, out_dir: pathlib.Path, prefix: str):
+    """
+    فایل بهینه‌شده را به تکه‌های SERVER_CHUNK_SIZE بایتی می‌شکند، با نام‌گذاری
+    prefix + شماره‌ی صفرپرشده (مثل Shahnameh_Atlas.db.0000) — دقیقاً همان قراردادی
+    که sql.js-httpvfs در «حالت chunked» انتظار دارد. تکه‌های قبلی (اگر مانده باشند) پاک می‌شوند.
+    """
+    for old in out_dir.glob(f"{prefix}.[0-9][0-9][0-9][0-9]"):
+        old.unlink()
+
+    total_bytes = db_path.stat().st_size
+    chunk_count = 0
+    with open(db_path, "rb") as f:
+        while True:
+            data = f.read(SERVER_CHUNK_SIZE)
+            if not data:
+                break
+            chunk_name = f"{prefix}.{str(chunk_count).zfill(SUFFIX_LENGTH)}"
+            (out_dir / chunk_name).write_bytes(data)
+            chunk_count += 1
+    return total_bytes, chunk_count
+
 def main():
     if len(sys.argv) != 2:
         print("استفاده: python3 update_data.py path/to/YourDatabase.db")
@@ -80,14 +102,25 @@ def main():
         sys.exit(1)
 
     here = pathlib.Path(__file__).parent
-    dest = here / "Shahnameh_Atlas.db"
+    optimized = here / "_optimized_tmp.db"  # فایل موقت، فقط برای ساخت تکه‌ها؛ در ریپازیتوری آپلود نمی‌شود
 
     # روی یک نسخه‌ی کپی کار می‌کنیم تا فایل اصلی شما دست‌نخورده بماند
-    shutil.copy2(src, dest)
-    added, skipped = optimize_for_httpvfs(dest)
+    shutil.copy2(src, optimized)
+    added, skipped = optimize_for_httpvfs(optimized)
+
+    db_prefix = "Shahnameh_Atlas.db"
+    total_bytes, chunk_count = split_into_chunks(optimized, here, db_prefix)
+
+    (here / "db-meta.js").write_text(
+        f"const DB_LENGTH_BYTES = {total_bytes};\n"
+        f"const DB_URL_PREFIX = {json.dumps(db_prefix + '.')};\n"
+        f"const DB_SERVER_CHUNK_SIZE = {SERVER_CHUNK_SIZE};\n"
+        f"const DB_SUFFIX_LENGTH = {SUFFIX_LENGTH};\n",
+        encoding="utf-8",
+    )
 
     # --- stats-data.js (بدون تغییر نسبت به قبل) ---
-    con = sqlite3.connect(str(dest))
+    con = sqlite3.connect(str(optimized))
     cur = con.cursor()
 
     def count(table):
@@ -151,13 +184,17 @@ def main():
         encoding="utf-8",
     )
 
-    db_size_mb = dest.stat().st_size / (1024*1024)
-    print(f"Shahnameh_Atlas.db بهینه‌سازی شد ({db_size_mb:.1f} مگابایت) — {added} اندیس ساخته شد، {skipped} مورد رد شد (طبیعی).")
-    print(f"stats-data.js بازسازی شد.")
+    optimized_size_mb = total_bytes / (1024*1024)
+    optimized.unlink()  # فایل موقت را پاک می‌کنیم؛ فقط تکه‌ها می‌مانند
+
+    print(f"دیتابیس بهینه و تکه‌تکه شد: {chunk_count} فایل، مجموعاً {optimized_size_mb:.1f} مگابایت")
+    print(f"({added} اندیس ساخته شد، {skipped} مورد رد شد — طبیعی است.)")
+    print(f"stats-data.js و db-meta.js بازسازی شدند.")
     print(f"وضعیت فعلی (فقط نسخه‌ی {PUBLIC_EDITION}): {stats}")
     if beyts_m == 0:
         print("\n⚠️  هشدار: صفر بیت با edition='M' در این دیتابیس یافت شد.")
         print("   یعنی سایت عمومی فعلاً هیچ بیتی نشان نمی‌دهد.")
+    print(f"\n📦 فایل‌هایی که باید در گیت‌هاب آپلود کنید: {db_prefix}.0000 تا {db_prefix}.{str(chunk_count-1).zfill(SUFFIX_LENGTH)}، به‌علاوه‌ی db-meta.js و stats-data.js")
 
 if __name__ == "__main__":
     main()

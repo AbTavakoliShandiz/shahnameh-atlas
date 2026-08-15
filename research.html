@@ -46,6 +46,7 @@
 
 <script src="httpvfs-index.js"></script>
 <script src="stats-data.js"></script>
+<script src="db-meta.js"></script>
 <script src="shared.js"></script>
 <script>renderChrome('research.html');</script>
 <script>
@@ -54,10 +55,17 @@ function rowsToObjects(r){ if(!r||!r.length) return []; const {columns,values}=r
 async function q(worker, sql){ return rowsToObjects(await worker.db.exec(sql)); }
 
 (async function(){
-  // سایت و دیتابیس هم‌مبدأاند (هر دو روی همان GitHub Pages) — مسیر نسبی کافی است.
-  const DB_URL = 'Shahnameh_Atlas.db';
+  // «حالت chunked» (نه «full») چون GitHub پاسخ HEAD را gzip می‌کند و full mode
+  // نمی‌تواند طول واقعی فایل را تشخیص دهد — این‌جا طول از db-meta.js می‌آید.
   const worker = await createDbWorker(
-    [{ from: 'inline', config: { serverMode: 'full', requestChunkSize: 1024, url: DB_URL } }],
+    [{ from: 'inline', config: {
+        serverMode: 'chunked',
+        requestChunkSize: 1024,
+        urlPrefix: DB_URL_PREFIX,
+        serverChunkSize: DB_SERVER_CHUNK_SIZE,
+        suffixLength: DB_SUFFIX_LENGTH,
+        databaseLengthBytes: DB_LENGTH_BYTES
+    } }],
     'sqlite.worker.js',
     'sql-wasm.wasm'
   );
