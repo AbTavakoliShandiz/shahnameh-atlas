@@ -23,10 +23,7 @@ import json
 import shutil
 import sqlite3
 import pathlib
-<<<<<<< HEAD
 import hashlib
-=======
->>>>>>> ba3d772833b55f88bf2e9352bbbca861b5e212c2
 
 PUBLIC_EDITION = "M"
 SERVER_CHUNK_SIZE = 1024 * 1024  # هر تکه ۱ مگابایت — تعادل بین تعداد فایل و کارایی
@@ -115,25 +112,18 @@ def main():
     db_prefix = "Shahnameh_Atlas.db"
     total_bytes, chunk_count = split_into_chunks(optimized, here, db_prefix)
 
-<<<<<<< HEAD
     # هش محتوا برای cache-bust — چون ممکن است فایلی مثل Shahnameh_Atlas.db.0000
     # از نسخه‌ی قبلی (با محتوای کاملاً متفاوت) در کش مرورگر یا CDN گیت‌هاب مانده
     # باشد. با تغییر این مقدار در هر آپدیت، httpvfs مجبور می‌شود نسخه‌ی تازه را
     # بخواهد، نه نسخه‌ی کش‌شده‌ی قدیمی با همان نام فایل.
     content_hash = hashlib.sha256(optimized.read_bytes()).hexdigest()[:12]
 
-=======
->>>>>>> ba3d772833b55f88bf2e9352bbbca861b5e212c2
     (here / "db-meta.js").write_text(
         f"const DB_LENGTH_BYTES = {total_bytes};\n"
         f"const DB_URL_PREFIX = {json.dumps(db_prefix + '.')};\n"
         f"const DB_SERVER_CHUNK_SIZE = {SERVER_CHUNK_SIZE};\n"
-<<<<<<< HEAD
         f"const DB_SUFFIX_LENGTH = {SUFFIX_LENGTH};\n"
         f"const DB_CACHE_BUST = {json.dumps(content_hash)};\n",
-=======
-        f"const DB_SUFFIX_LENGTH = {SUFFIX_LENGTH};\n",
->>>>>>> ba3d772833b55f88bf2e9352bbbca861b5e212c2
         encoding="utf-8",
     )
 
