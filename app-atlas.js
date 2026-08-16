@@ -48,8 +48,12 @@ async function init(){
         urlPrefix: DB_URL_PREFIX,
         serverChunkSize: DB_SERVER_CHUNK_SIZE,
         suffixLength: DB_SUFFIX_LENGTH,
+<<<<<<< HEAD
         databaseLengthBytes: DB_LENGTH_BYTES,
         cacheBust: typeof DB_CACHE_BUST !== 'undefined' ? DB_CACHE_BUST : undefined
+=======
+        databaseLengthBytes: DB_LENGTH_BYTES
+>>>>>>> ba3d772833b55f88bf2e9352bbbca861b5e212c2
     }}],
     'sqlite.worker.js',
     'sql-wasm.wasm'
