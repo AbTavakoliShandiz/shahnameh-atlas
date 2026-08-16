@@ -1,0 +1,1 @@
+const ATLAS_STATS = {"public_edition": "M", "beyts": 49630, "entities": 476, "concepts": 74, "events": 87, "entity_relations": 29, "event_relations": 56, "sections": 49, "sections_with_data": 6, "sections_progress_pct": 12.2, "dynasties": 4, "beyt_entity_links": 1445, "beyt_concept_links": 2134, "audio_clips": 0, "alternate_meanings": 0, "articles": 1};

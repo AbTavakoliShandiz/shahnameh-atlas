@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>پژوهش‌ها — اطلس مفهومی شاهنامه | The Shahnameh Conceptual Atlas</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="logo-mark-64.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="shared.css">
+<style>
+.article-card{ margin-bottom:22px; }
+.article-head{ display:flex; justify-content:space-between; align-items:start; gap:16px; flex-wrap:wrap; margin-bottom:10px; }
+.article-title{ font-size:1.1rem; color:var(--indigo); margin:0 0 4px; font-weight:700; }
+.article-byline{ font-size:0.85rem; color:var(--ink-soft); }
+.article-cite{ font-size:0.78rem; color:var(--ink-soft); background:var(--paper-deep); padding:8px 12px; border-radius:2px; margin-top:8px; }
+.article-section{ margin-top:16px; }
+.article-section h5{ font-size:0.8rem; color:var(--gold); margin:0 0 8px; font-weight:600; }
+.item-list{ margin:0; padding-right:18px; font-size:0.85rem; color:var(--ink); }
+.item-list li{ margin-bottom:6px; line-height:1.7; }
+.item-list .cite-note{ font-size:0.76rem; color:var(--ink-soft); display:block; margin-top:2px; }
+.kw-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+.link-empty{ font-size:0.82rem; color:var(--ink-soft); font-style:italic; }
+.empty-state{ text-align:center; padding:60px 20px; color:var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header id="site-header" class="site-header"></header>
+
+<section class="page-hero">
+  <div class="container">
+    <div class="eyebrow">پژوهش‌ها</div>
+    <h1>پایگاه پژوهش‌های شاهنامه‌شناسی</h1>
+    <p>مقالات و منابعی که در تدوین اطلس استفاده یا نقد شده‌اند — این بخش هم‌زمان با گسترش پروژه رشد می‌کند.</p>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div id="articles-wrap"><div class="loading" style="padding:60px;text-align:center;color:var(--ink-soft);">در حال بارگذاری…</div></div>
+  </div>
+</section>
+
+<footer id="site-footer" class="site-footer"></footer>
+
+<script src="httpvfs-index.js"></script>
+<script src="stats-data.js"></script>
+<script src="db-meta.js"></script>
+<script src="shared.js"></script>
+<script>renderChrome('research.html');</script>
+<script>
+function escapeHtml(s){ if(s===null||s===undefined) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function rowsToObjects(r){ if(!r||!r.length) return []; const {columns,values}=r[0]; return values.map(v=>Object.fromEntries(columns.map((c,i)=>[c,v[i]]))); }
+async function q(worker, sql){ return rowsToObjects(await worker.db.exec(sql)); }
+
+(async function(){
+  // «حالت chunked» (نه «full») چون GitHub پاسخ HEAD را gzip می‌کند و full mode
+  // نمی‌تواند طول واقعی فایل را تشخیص دهد — این‌جا طول از db-meta.js می‌آید.
+  const worker = await createDbWorker(
+    [{ from: 'inline', config: {
+        serverMode: 'chunked',
+        requestChunkSize: 1024,
+        urlPrefix: DB_URL_PREFIX,
+        serverChunkSize: DB_SERVER_CHUNK_SIZE,
+        suffixLength: DB_SUFFIX_LENGTH,
+        databaseLengthBytes: DB_LENGTH_BYTES,
+        cacheBust: typeof DB_CACHE_BUST !== 'undefined' ? DB_CACHE_BUST : undefined
+    } }],
+    'sqlite.worker.js',
+    'sql-wasm.wasm'
+  );
+
+  const articles = await q(worker, 'SELECT * FROM res_articles ORDER BY article_id');
+  const wrap = document.getElementById('articles-wrap');
+
+  if(!articles.length){
+    wrap.innerHTML = '<div class="empty-state">هنوز مقاله‌ای ثبت نشده است.</div>';
+    return;
+  }
+
+  const cards = await Promise.all(articles.map(async a=>{
+    const [kw, themes, sources, critiques, linkedEntities, linkedSubstories] = await Promise.all([
+      q(worker, `SELECT keyword FROM res_article_keywords WHERE article_id=${a.article_id}`),
+      q(worker, `SELECT item_number, description, page_start, page_end FROM res_article_themes WHERE article_id=${a.article_id} ORDER BY item_number`),
+      q(worker, `SELECT item_number, description FROM res_article_sources WHERE article_id=${a.article_id} ORDER BY item_number`),
+      q(worker, `SELECT item_number, description, cites_text FROM res_article_critiques WHERE article_id=${a.article_id} ORDER BY item_number`),
+      q(worker, `SELECT ke.name FROM res_article_entities rae JOIN know_entities ke ON ke.entity_id = rae.entity_id WHERE rae.article_id=${a.article_id}`),
+      q(worker, `SELECT cs.substory_name, ras.section_code FROM res_article_substories ras JOIN core_substories cs ON cs.section_code=ras.section_code AND cs.substory_num=ras.substory_num WHERE ras.article_id=${a.article_id}`),
+    ]);
+
+    const citation = `${a.author ? escapeHtml(a.author)+'، ' : ''}«${escapeHtml(a.title)}»، ${a.journal ? escapeHtml(a.journal)+'، ' : ''}${a.volume ? escapeHtml(a.volume)+'، ' : ''}${a.issue ? escapeHtml(a.issue)+'، ' : ''}${a.year_shamsi ? a.year_shamsi+' ش' : ''}${a.page_start ? '، صص ' + a.page_start + (a.page_end ? '–'+a.page_end : '') : ''}`;
+
+    return `<div class="card article-card">
+      <div class="article-head">
+        <div>
+          <h3 class="article-title">${escapeHtml(a.title)}</h3>
+          <div class="article-byline">${escapeHtml(a.author || 'نویسنده نامشخص')}${a.year_shamsi ? ' · ' + a.year_shamsi + ' ش' : ''}</div>
+        </div>
+      </div>
+      <div class="article-cite">${citation}</div>
+
+      ${kw.length ? `<div class="kw-row">${kw.map(k=>`<span class="tag gold">${escapeHtml(k.keyword)}</span>`).join('')}</div>` : ''}
+
+      ${themes.length ? `<div class="article-section"><h5>درون‌مایه‌ها</h5><ul class="item-list">
+        ${themes.map(t=>`<li>${escapeHtml(t.description)}${t.page_start?` <span class="cite-note">(صص ${t.page_start}${t.page_end?'–'+t.page_end:''})</span>`:''}</li>`).join('')}
+      </ul></div>` : ''}
+
+      ${sources.length ? `<div class="article-section"><h5>منابع مورد استناد مقاله</h5><ul class="item-list">
+        ${sources.map(s=>`<li>${escapeHtml(s.description)}</li>`).join('')}
+      </ul></div>` : ''}
+
+      ${critiques.length ? `<div class="article-section"><h5>نقد و بررسی</h5><ul class="item-list">
+        ${critiques.map(c=>`<li>${escapeHtml(c.description)}${c.cites_text?`<span class="cite-note">مستند به: ${escapeHtml(c.cites_text)}</span>`:''}</li>`).join('')}
+      </ul></div>` : ''}
+
+      <div class="article-section"><h5>ارجاع به اطلس</h5>
+        ${linkedEntities.length ? `<div class="kw-row">${linkedEntities.map(e=>`<span class="tag">${escapeHtml(e.name)}</span>`).join('')}</div>` : ''}
+        ${linkedSubstories.length ? `<div class="kw-row" style="margin-top:6px;">${linkedSubstories.map(s=>`<span class="tag">${escapeHtml(s.substory_name)}</span>`).join('')}</div>` : ''}
+        ${(!linkedEntities.length && !linkedSubstories.length) ? '<div class="link-empty">هنوز به مدخل یا داستان خاصی در اطلس پیوند نخورده است.</div>' : ''}
+      </div>
+    </div>`;
+  }));
+
+  wrap.innerHTML = cards.join('');
+})();
+</script>
+</body>
+</html>
