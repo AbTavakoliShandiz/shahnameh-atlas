@@ -129,8 +129,12 @@ async function runSearch(){
   const sectionCode = document.getElementById('f-section').value;
   const eraId = document.getElementById('f-era').value;
 
-  const viewProbe = await safeQuery('SELECT 1 FROM v_beyt_summary LIMIT 1');
-  let useView = viewProbe !== null;
+  // نکته: فعلاً به‌طور کامل از v_beyt_summary صرف‌نظر می‌کنیم و همیشه جوین دستی را
+  // اجرا می‌کنیم. دلیل: در عمل دیده شد که این ویو یا ستون‌های متفاوت دارد یا حتی
+  // وقتی بدون خطا اجرا می‌شود، ممکن است صفر ردیف برای edition='M' برگرداند (باگ
+  // احتمالی در تعریف خودِ ویو). جوین دستی زیر بارها تست و تأیید شده و قابل‌اعتماد
+  // است. هروقت تعریف دقیق v_beyt_summary تأیید شد، می‌شود دوباره فعالش کرد.
+  let useView = false;
 
   function buildQuery(useViewMode){
     let sql = useViewMode ? `
@@ -199,6 +203,7 @@ async function runSearch(){
 
   if(myToken !== searchToken) return; // جست‌وجوی جدیدتری شروع شده، این نتیجه دیگر مهم نیست
 
+  console.debug(`جست‌وجو: ${rows.length} ردیف برگشت (useView=${useView})`);
   currentResults = rows;
   await renderPage();
 }
