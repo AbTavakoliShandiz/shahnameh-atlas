@@ -13,24 +13,25 @@ function debounce(fn, ms){
 }
 function sqlEsc(s){ return String(s).replace(/'/g,"''"); }
 
-/** اجرای امن یک کوئری روی worker httpvfs؛ اگر جدول/ویو هنوز نباشد، خطا نمی‌دهد (فقط لاگ سبک برای دیباگ آینده). */
+/** اجرای امن یک کوئری؛ اگر جدول/ویو هنوز نباشد، خطا نمی‌دهد (فقط لاگ سبک برای دیباگ آینده). */
 async function safeQuery(sql, params){
-  try{ return rowsToObjects(await worker.db.exec(sql, params)); }
+  try{ return rowsToObjects(db.exec(sql, params)); }
   catch(e){ console.debug('safeQuery: جدول/ویو موجود نیست یا خطای دیگر (طبیعی است):', e.message); return null; }
 }
 async function runQuery(sql, params){
-  return rowsToObjects(await worker.db.exec(sql, params));
+  return rowsToObjects(db.exec(sql, params));
 }
 
 const PUBLIC_EDITION = 'M';
 
-// آدرس فایل دیتابیس. چون سایت و دیتابیس حالا هر دو روی همان GitHub Pages
-// (همان ریپازیتوری) میزبانی می‌شوند، هر دو هم‌مبدأ (same-origin) هستند.
-// از «حالت chunked» استفاده می‌کنیم (نه «full») چون GitHub پاسخ HEAD را gzip
-// می‌کند و این باعث می‌شد sql.js-httpvfs نتواند طول واقعی فایل را تشخیص دهد؛
-// در حالت chunked طول فایل مستقیم از db-meta.js خوانده می‌شود، نه از سرور.
+// آدرس فایل دیتابیس. سایت و دیتابیس هر دو روی همان GitHub Pages (همان ریپازیتوری)
+// میزبانی می‌شوند، پس مسیر نسبی ساده کافی است. کل فایل یک‌جا دانلود می‌شود (نه
+// تکه‌تکه) — چون حجم واقعی آن (چند مگابایت فشرده‌شده با gzip خودکار GitHub) برای
+// یک دانلود یک‌باره کاملاً مناسب است؛ این هم ساده‌تر است هم در عمل سریع‌تر از
+// ده‌ها درخواست شبکه‌ی کوچک. جزئیات کامل تصمیم در README.
+const DB_URL = 'Shahnameh_Atlas.db';
 
-let worker = null; // sql.js-httpvfs worker (تمام کوئری‌ها async و از طریق HTTP Range می‌آیند)
+let db = null; // پایگاه‌داده‌ی sql.js در حافظه (بعد از دانلود کامل، تمام کوئری‌ها محلی و آنی‌اند)
 const PAGE_SIZE = 20;
 let currentPage = 1;
 let currentResults = [];
@@ -39,21 +40,16 @@ let searchToken = 0; // برای نادیده‌گرفتن نتایج قدیمی
 
 /* ===================== init ===================== */
 async function init(){
-  document.getElementById('results-wrap').innerHTML = '<div class="loading">در حال اتصال به دیتابیس (بارگذاری تکه‌ای، نه کل فایل)…</div>';
+  document.getElementById('results-wrap').innerHTML = '<div class="loading">در حال دانلود دیتابیس…</div>';
 
-  worker = await createDbWorker(
-    [{ from: 'inline', config: {
-        serverMode: 'chunked',
-        requestChunkSize: 1024,
-        urlPrefix: DB_URL_PREFIX,
-        serverChunkSize: DB_SERVER_CHUNK_SIZE,
-        suffixLength: DB_SUFFIX_LENGTH,
-        databaseLengthBytes: DB_LENGTH_BYTES,
-        cacheBust: typeof DB_CACHE_BUST !== 'undefined' ? DB_CACHE_BUST : undefined
-    }}],
-    'sqlite.worker.js',
-    'sql-wasm.wasm'
-  );
+  const SQL = await initSqlJs({ locateFile: () => 'plain-sql-wasm.wasm' });
+  const dbUrl = window.ATLAS_STATS && window.ATLAS_STATS.db_version
+    ? `${DB_URL}?v=${window.ATLAS_STATS.db_version}`
+    : DB_URL;
+  const resp = await fetch(dbUrl);
+  if(!resp.ok) throw new Error(`دانلود دیتابیس شکست خورد: HTTP ${resp.status}`);
+  const buf = await resp.arrayBuffer();
+  db = new SQL.Database(new Uint8Array(buf));
 
   await populateFilters();
   await renderStats();

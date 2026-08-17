@@ -44,34 +44,25 @@
 
 <footer id="site-footer" class="site-footer"></footer>
 
-<script src="httpvfs-index.js"></script>
+<script src="plain-sql-wasm.js"></script>
 <script src="stats-data.js"></script>
-<script src="db-meta.js"></script>
 <script src="shared.js"></script>
 <script>renderChrome('research.html');</script>
 <script>
 function escapeHtml(s){ if(s===null||s===undefined) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function rowsToObjects(r){ if(!r||!r.length) return []; const {columns,values}=r[0]; return values.map(v=>Object.fromEntries(columns.map((c,i)=>[c,v[i]]))); }
-async function q(worker, sql){ return rowsToObjects(await worker.db.exec(sql)); }
+function q(sql){ return rowsToObjects(db.exec(sql)); }
 
 (async function(){
-  // «حالت chunked» (نه «full») چون GitHub پاسخ HEAD را gzip می‌کند و full mode
-  // نمی‌تواند طول واقعی فایل را تشخیص دهد — این‌جا طول از db-meta.js می‌آید.
-  const worker = await createDbWorker(
-    [{ from: 'inline', config: {
-        serverMode: 'chunked',
-        requestChunkSize: 1024,
-        urlPrefix: DB_URL_PREFIX,
-        serverChunkSize: DB_SERVER_CHUNK_SIZE,
-        suffixLength: DB_SUFFIX_LENGTH,
-        databaseLengthBytes: DB_LENGTH_BYTES,
-        cacheBust: typeof DB_CACHE_BUST !== 'undefined' ? DB_CACHE_BUST : undefined
-    } }],
-    'sqlite.worker.js',
-    'sql-wasm.wasm'
-  );
+  const SQL = await initSqlJs({ locateFile: () => 'plain-sql-wasm.wasm' });
+  const dbUrl = window.ATLAS_STATS && window.ATLAS_STATS.db_version
+    ? `Shahnameh_Atlas.db?v=${window.ATLAS_STATS.db_version}`
+    : 'Shahnameh_Atlas.db';
+  const resp = await fetch(dbUrl);
+  const buf = await resp.arrayBuffer();
+  const db = new SQL.Database(new Uint8Array(buf));
 
-  const articles = await q(worker, 'SELECT * FROM res_articles ORDER BY article_id');
+  const articles = q('SELECT * FROM res_articles ORDER BY article_id');
   const wrap = document.getElementById('articles-wrap');
 
   if(!articles.length){
@@ -81,12 +72,12 @@ async function q(worker, sql){ return rowsToObjects(await worker.db.exec(sql)); 
 
   const cards = await Promise.all(articles.map(async a=>{
     const [kw, themes, sources, critiques, linkedEntities, linkedSubstories] = await Promise.all([
-      q(worker, `SELECT keyword FROM res_article_keywords WHERE article_id=${a.article_id}`),
-      q(worker, `SELECT item_number, description, page_start, page_end FROM res_article_themes WHERE article_id=${a.article_id} ORDER BY item_number`),
-      q(worker, `SELECT item_number, description FROM res_article_sources WHERE article_id=${a.article_id} ORDER BY item_number`),
-      q(worker, `SELECT item_number, description, cites_text FROM res_article_critiques WHERE article_id=${a.article_id} ORDER BY item_number`),
-      q(worker, `SELECT ke.name FROM res_article_entities rae JOIN know_entities ke ON ke.entity_id = rae.entity_id WHERE rae.article_id=${a.article_id}`),
-      q(worker, `SELECT cs.substory_name, ras.section_code FROM res_article_substories ras JOIN core_substories cs ON cs.section_code=ras.section_code AND cs.substory_num=ras.substory_num WHERE ras.article_id=${a.article_id}`),
+      q(`SELECT keyword FROM res_article_keywords WHERE article_id=${a.article_id}`),
+      q(`SELECT item_number, description, page_start, page_end FROM res_article_themes WHERE article_id=${a.article_id} ORDER BY item_number`),
+      q(`SELECT item_number, description FROM res_article_sources WHERE article_id=${a.article_id} ORDER BY item_number`),
+      q(`SELECT item_number, description, cites_text FROM res_article_critiques WHERE article_id=${a.article_id} ORDER BY item_number`),
+      q(`SELECT ke.name FROM res_article_entities rae JOIN know_entities ke ON ke.entity_id = rae.entity_id WHERE rae.article_id=${a.article_id}`),
+      q(`SELECT cs.substory_name, ras.section_code FROM res_article_substories ras JOIN core_substories cs ON cs.section_code=ras.section_code AND cs.substory_num=ras.substory_num WHERE ras.article_id=${a.article_id}`),
     ]);
 
     const citation = `${a.author ? escapeHtml(a.author)+'، ' : ''}«${escapeHtml(a.title)}»، ${a.journal ? escapeHtml(a.journal)+'، ' : ''}${a.volume ? escapeHtml(a.volume)+'، ' : ''}${a.issue ? escapeHtml(a.issue)+'، ' : ''}${a.year_shamsi ? a.year_shamsi+' ش' : ''}${a.page_start ? '، صص ' + a.page_start + (a.page_end ? '–'+a.page_end : '') : ''}`;

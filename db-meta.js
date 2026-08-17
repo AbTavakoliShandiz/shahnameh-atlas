@@ -1,5 +1,0 @@
-const DB_LENGTH_BYTES = 11641856;
-const DB_URL_PREFIX = "Shahnameh_Atlas.db.";
-const DB_SERVER_CHUNK_SIZE = 94371840;
-const DB_SUFFIX_LENGTH = 4;
-const DB_CACHE_BUST = "7df34162b63c";
