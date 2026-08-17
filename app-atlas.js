@@ -186,7 +186,7 @@ async function runSearch(){
   try{
     rows = await runQuery(sql, params);
   }catch(e){
-    console.error('خطای کوئری جست‌وجو (حالت view):', e);
+    console.error('خطای کوئری جست‌وجو:', e);
     if(useView){
       // ویو v_beyt_summary شاید ستون‌هایش با انتظار ما فرق دارد — به جوین دستی برمی‌گردیم
       useView = false;
